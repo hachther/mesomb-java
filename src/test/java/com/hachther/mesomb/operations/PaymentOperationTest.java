@@ -1,7 +1,7 @@
 package com.hachther.mesomb.operations;
 
-import com.hachther.mesomb.Settings;
-import com.hachther.mesomb.Signature;
+import com.hachther.mesomb.MeSomb;
+import com.hachther.mesomb.util.RandomGenerator;
 import com.hachther.mesomb.exceptions.InvalidClientRequestException;
 import com.hachther.mesomb.exceptions.PermissionDeniedException;
 import com.hachther.mesomb.exceptions.ServerException;
@@ -17,9 +17,7 @@ import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
-import java.util.Objects;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class PaymentOperationTest {
@@ -29,7 +27,7 @@ public class PaymentOperationTest {
 
     @BeforeEach
     public void onSetup() {
-        Settings.HOST = "http://127.0.0.1:8000";
+        MeSomb.apiBase = "http://192.168.8.101:8000";
     }
 
     @Test
@@ -63,7 +61,7 @@ public class PaymentOperationTest {
     public void testMakeCollectWithSuccess() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            TransactionResponse response = payment.makeCollect(100, "MTN", "677550203", new Date(), Signature.nonceGenerator());
+            TransactionResponse response = payment.makeCollect(100, "MTN", "677550203", new Date(), RandomGenerator.nonce());
             Assertions.assertTrue(response.isOperationSuccess());
             Assertions.assertTrue(response.isTransactionSuccess());
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | ServerException |
@@ -76,7 +74,7 @@ public class PaymentOperationTest {
     public void testMakeCollectWithPending() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            TransactionResponse response = payment.makeCollect(100, "MTN", "677550203", new Date(), Signature.nonceGenerator(), "CM", "XAF", true, "asynchronous");
+            TransactionResponse response = payment.makeCollect(100, "MTN", "677550203", new Date(), RandomGenerator.nonce(), "CM", "XAF", true, "asynchronous");
             Assertions.assertTrue(response.isOperationSuccess());
             Assertions.assertFalse(response.isTransactionSuccess());
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | ServerException |
@@ -116,7 +114,7 @@ public class PaymentOperationTest {
     public void testMakeDepositWithSuccess() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            TransactionResponse response = payment.makeDeposit(100, "MTN", "677550203", new Date(), Signature.nonceGenerator());
+            TransactionResponse response = payment.makeDeposit(100, "MTN", "677550203", new Date(), RandomGenerator.nonce());
             Assertions.assertTrue(response.isOperationSuccess());
             Assertions.assertTrue(response.isTransactionSuccess());
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | ServerException |
@@ -198,6 +196,36 @@ public class PaymentOperationTest {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
             JSONArray transactions = payment.getTransactions(new String[]{"9886f099-dee2-4eaa-9039-e92b2ee33353"});
+            Assertions.assertEquals(1, transactions.size());
+        } catch (ServerException | ServiceNotFoundException | PermissionDeniedException | IOException |
+                 NoSuchAlgorithmException | InvalidClientRequestException | InvalidKeyException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    public void testCheckTransactionsNotServiceFound() {
+        PaymentOperation payment = new PaymentOperation(this.applicationKey + "f", this.accessKey, this.secretKey);
+        Exception exception = assertThrows(ServiceNotFoundException.class, () -> {
+            payment.checkTransactions(new String[]{"c6c40b76-8119-4e93-81bf-bfb55417b392"});
+        });
+        Assertions.assertEquals("Application not found", exception.getMessage());
+    }
+
+    @Test
+    public void testCheckTransactionsPermissionDenied() {
+        PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey + "f", this.secretKey);
+        Exception exception = assertThrows(PermissionDeniedException.class, () -> {
+            payment.checkTransactions(new String[]{"c6c40b76-8119-4e93-81bf-bfb55417b392"});
+        });
+        Assertions.assertEquals("Invalid access key", exception.getMessage());
+    }
+
+    @Test
+    public void testCheckTransactionsSuccess() {
+        PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
+        try {
+            JSONArray transactions = payment.checkTransactions(new String[]{"9886f099-dee2-4eaa-9039-e92b2ee33353"});
             Assertions.assertEquals(1, transactions.size());
         } catch (ServerException | ServiceNotFoundException | PermissionDeniedException | IOException |
                  NoSuchAlgorithmException | InvalidClientRequestException | InvalidKeyException e) {

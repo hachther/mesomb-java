@@ -1,6 +1,6 @@
 package com.hachther.mesomb.operations;
 
-import com.hachther.mesomb.Settings;
+import com.hachther.mesomb.MeSomb;
 import com.hachther.mesomb.Signature;
 import com.hachther.mesomb.exceptions.InvalidClientRequestException;
 import com.hachther.mesomb.exceptions.PermissionDeniedException;
@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Containing all operations provided by MeSomb Payment Service.
- *
  * [Check the documentation here](https://mesomb.hachther.com/en/api/v1.1/schema/)
  */
 public class PaymentOperation {
@@ -42,7 +41,7 @@ public class PaymentOperation {
     }
 
     private String buildUrl(String endpoint) {
-        return Settings.HOST + "/en/api/" + Settings.APIVERSION + "/" + endpoint;
+        return MeSomb.apiBase + "/en/api/" + MeSomb.apiVersion + "/" + endpoint;
     }
 
     private String getAuthorization(String method, String endpoint, Date date, String nonce, TreeMap<String, String> headers, Map<String, Object> body) throws MalformedURLException, UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeyException {
@@ -60,10 +59,9 @@ public class PaymentOperation {
     }
 
 
-    private void processClientException(Response response) throws IOException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException, ServerException {
-        assert response.body() != null;
-        String message = response.body().string();
+    private void processClientException(int statusCode, String response) throws IOException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException, ServerException {
         String code = null;
+        String message = response;
         if (message.startsWith("{")) {
             JSONParser parser = new JSONParser();
             try {
@@ -73,16 +71,51 @@ public class PaymentOperation {
             } catch (ParseException ignored) {
             }
         }
-        switch (response.code()) {
-            case 404:
-                throw new ServiceNotFoundException(message);
-            case 403:
-            case 401:
-                throw new PermissionDeniedException(message);
-            case 400:
-                throw new InvalidClientRequestException(message, code);
-            default:
-                throw new ServerException(message, code);
+        switch (statusCode) {
+            case 404 -> throw new ServiceNotFoundException(message);
+            case 403, 401 -> throw new PermissionDeniedException(message);
+            case 400 -> throw new InvalidClientRequestException(message, code);
+            default -> throw new ServerException(message, code);
+        }
+    }
+
+    private String executeRequest(String method, String endpoint, Date date) throws IOException, MalformedURLException, UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeyException, InvalidClientRequestException, ServerException, ServiceNotFoundException, PermissionDeniedException {
+        return this.executeRequest(method, endpoint, date, "", null, null);
+    }
+    private String executeRequest(String method, String endpoint, Date date, String nonce, Map<String, Object> body) throws IOException, MalformedURLException, UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeyException, InvalidClientRequestException, ServerException, ServiceNotFoundException, PermissionDeniedException {
+        return this.executeRequest(method, endpoint, date, nonce, body, null);
+    }
+    private String executeRequest(String method, String endpoint, Date date, String nonce, Map<String, Object> body, String mode) throws IOException, MalformedURLException, UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeyException, InvalidClientRequestException, ServerException, ServiceNotFoundException, PermissionDeniedException {
+        String url = this.buildUrl(endpoint);
+        String authorization;
+        if (method.equals("POST")) {
+            authorization = this.getAuthorization(method, endpoint, date, nonce, new TreeMap<>() {{
+                put("content-type", JSON.toString());
+            }}, body);
+        } else {
+            authorization = this.getAuthorization(method, endpoint, date, nonce);
+        }
+
+        OkHttpClient client = new OkHttpClient.Builder().readTimeout(30, TimeUnit.SECONDS).build();
+
+        Request.Builder builder = new Request.Builder()
+                .url(url)
+                .method(method, body != null ? RequestBody.create(JSONObject.toJSONString(body), JSON) : null)
+                .addHeader("x-mesomb-date", String.valueOf(date.getTime() / 1000))
+                .addHeader("x-mesomb-nonce", nonce)
+                .addHeader("Authorization", authorization)
+                .addHeader("X-MeSomb-Application", this.applicationKey);
+        if (mode != null) {
+            builder = builder.addHeader("X-MeSomb-OperationMode", mode);
+        }
+
+        try (Response response = client.newCall(builder.build()).execute()) {
+            if (response.code() >= 400) {
+                assert response.body() != null;
+                this.processClientException(response.code(), response.body().string());
+            }
+            assert response.body() != null;
+            return response.body().string();
         }
     }
 
@@ -128,7 +161,6 @@ public class PaymentOperation {
             Map<String, String> product,
             Map<String, Object> extra) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
         String endpoint = "payment/collect/";
-        String url = this.buildUrl(endpoint);
 
         Map<String, Object> body = new HashMap<>();
         body.put("amount", amount);
@@ -157,33 +189,11 @@ public class PaymentOperation {
             }
         }
 
-        String authorization = this.getAuthorization("POST", endpoint, date, nonce, new TreeMap<>() {{
-            put("content-type", JSON.toString());
-        }}, body);
-
-        OkHttpClient client = new OkHttpClient.Builder().readTimeout(30, TimeUnit.SECONDS).build();
-
-        Request request = new Request.Builder()
-                .url(url)
-                .post(RequestBody.create(JSONObject.toJSONString(body), JSON))
-//                .addHeader("Content-Type", "application/json")
-                .addHeader("x-mesomb-date", String.valueOf(date.getTime() / 1000))
-                .addHeader("x-mesomb-nonce", nonce)
-                .addHeader("Authorization", authorization)
-                .addHeader("X-MeSomb-Application", this.applicationKey)
-                .addHeader("X-MeSomb-OperationMode", mode)
-                .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            if (response.code() >= 400) {
-                this.processClientException(response);
-            }
-            JSONParser parser = new JSONParser();
-            try {
-                return new TransactionResponse((JSONObject) parser.parse(response.body().string()));
-            } catch (ParseException e) {
-                throw new ServerException("Issue to parse transaction response", "parsing-issue");
-            }
+        JSONParser parser = new JSONParser();
+        try {
+            return new TransactionResponse((JSONObject) parser.parse(this.executeRequest("POST", endpoint, date, nonce, body, mode)));
+        } catch (ParseException e) {
+            throw new ServerException("Issue to parse transaction response", "parsing-issue");
         }
     }
 
@@ -217,7 +227,6 @@ public class PaymentOperation {
      */
     public TransactionResponse makeDeposit(float amount, String service, String receiver, Date date, String nonce, String country, String currency, Map<String, Object> extra) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
         String endpoint = "payment/deposit/";
-        String url = this.buildUrl(endpoint);
 
         Map<String, Object> body = new HashMap<>();
         body.put("amount", amount);
@@ -232,32 +241,11 @@ public class PaymentOperation {
             }
         }
 
-        String authorization = this.getAuthorization("POST", endpoint, date, nonce, new TreeMap<>() {{
-            put("content-type", JSON.toString());
-        }}, body);
-
-        OkHttpClient client = new OkHttpClient.Builder().readTimeout(30, TimeUnit.SECONDS).build();
-
-        Request request = new Request.Builder()
-                .url(url)
-                .post(RequestBody.create(JSONObject.toJSONString(body), JSON))
-//                .addHeader("Content-Type", "application/json")
-                .addHeader("x-mesomb-date", String.valueOf(date.getTime() / 1000))
-                .addHeader("x-mesomb-nonce", nonce)
-                .addHeader("Authorization", authorization)
-                .addHeader("X-MeSomb-Application", this.applicationKey)
-                .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            if (response.code() >= 400) {
-                this.processClientException(response);
-            }
-            JSONParser parser = new JSONParser();
-            try {
-                return new TransactionResponse((JSONObject) parser.parse(response.body().string()));
-            } catch (ParseException e) {
-                throw new ServerException("Issue to parse transaction response", "parsing-issue");
-            }
+        JSONParser parser = new JSONParser();
+        try {
+            return new TransactionResponse((JSONObject) parser.parse(this.executeRequest("POST", endpoint, date, nonce, body)));
+        } catch (ParseException e) {
+            throw new ServerException("Issue to parse transaction response", "parsing-issue");
         }
     }
 
@@ -284,7 +272,6 @@ public class PaymentOperation {
      */
     public Application updateSecurity(String field, String action, Object value, Date date) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
         String endpoint = "payment/security/";
-        String url = this.buildUrl(endpoint);
 
         Map<String, Object> body = new HashMap<>();
         body.put("field", field);
@@ -297,32 +284,11 @@ public class PaymentOperation {
             date = new Date();
         }
 
-        String authorization = this.getAuthorization("POST", endpoint, date, "", new TreeMap<>() {{
-            put("content-type", JSON.toString());
-        }}, body);
-
-        OkHttpClient client = new OkHttpClient.Builder().readTimeout(30, TimeUnit.SECONDS).build();
-
-        Request request = new Request.Builder()
-                .url(url)
-                .post(RequestBody.create(JSONObject.toJSONString(body), JSON))
-//                .addHeader("Content-Type", "application/json")
-                .addHeader("x-mesomb-date", String.valueOf(date.getTime() / 1000))
-                .addHeader("x-mesomb-nonce", "")
-                .addHeader("Authorization", authorization)
-                .addHeader("X-MeSomb-Application", this.applicationKey)
-                .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            if (response.code() >= 400) {
-                this.processClientException(response);
-            }
-            JSONParser parser = new JSONParser();
-            try {
-                return new Application((JSONObject) parser.parse(response.body().string()));
-            } catch (ParseException e) {
-                throw new ServerException("Issue to parse transaction response", "parsing-issue");
-            }
+        JSONParser parser = new JSONParser();
+        try {
+            return new Application((JSONObject) parser.parse(this.executeRequest("POST", endpoint, date, "", body)));
+        } catch (ParseException e) {
+            throw new ServerException("Issue to parse transaction response", "parsing-issue");
         }
     }
 
@@ -349,35 +315,16 @@ public class PaymentOperation {
      */
     public Application getStatus(Date date) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
         String endpoint = "payment/status/";
-        String url = this.buildUrl(endpoint);
 
         if (date == null) {
             date = new Date();
         }
 
-        String authorization = this.getAuthorization("GET", endpoint, date, "");
-
-        OkHttpClient client = new OkHttpClient();
-
-        Request request = new Request.Builder()
-                .url(url)
-                .get()
-                .addHeader("x-mesomb-date", String.valueOf(date.getTime() / 1000))
-                .addHeader("x-mesomb-nonce", "")
-                .addHeader("Authorization", authorization)
-                .addHeader("X-MeSomb-Application", this.applicationKey)
-                .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            if (response.code() >= 400) {
-                this.processClientException(response);
-            }
-            JSONParser parser = new JSONParser();
-            try {
-                return new Application((JSONObject) parser.parse(response.body().string()));
-            } catch (ParseException e) {
-                throw new ServerException("Issue to parse transaction response", "parsing-issue");
-            }
+        JSONParser parser = new JSONParser();
+        try {
+            return new Application((JSONObject) parser.parse(this.executeRequest("GET", endpoint, date)));
+        } catch (ParseException e) {
+            throw new ServerException("Issue to parse transaction response", "parsing-issue");
         }
     }
 
@@ -385,41 +332,68 @@ public class PaymentOperation {
         return this.getStatus(null);
     }
 
+    /**
+     * Get transactions stored in MeSomb based on the list
+     *
+     * @param ids Ids of transactions to fetch
+     * @param date date to consider in the request
+     * @return List of the transactions fetched
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     * @throws ServerException
+     * @throws ServiceNotFoundException
+     * @throws PermissionDeniedException
+     * @throws InvalidClientRequestException
+     */
     public JSONArray getTransactions(String[] ids, Date date) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
         String endpoint = "payment/transactions/?ids=" + String.join(",", ids);
-        String url = this.buildUrl(endpoint);
 
         if (date == null) {
             date = new Date();
         }
 
-        String authorization = this.getAuthorization("GET", endpoint, date, "");
-
-        OkHttpClient client = new OkHttpClient();
-
-        Request request = new Request.Builder()
-                .url(url)
-                .get()
-                .addHeader("x-mesomb-date", String.valueOf(date.getTime() / 1000))
-                .addHeader("x-mesomb-nonce", "")
-                .addHeader("Authorization", authorization)
-                .addHeader("X-MeSomb-Application", this.applicationKey)
-                .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            if (response.code() >= 400) {
-                this.processClientException(response);
-            }
-            JSONParser parser = new JSONParser();
-            try {
-                return (JSONArray) parser.parse(response.body().string());
-            } catch (ParseException e) {
-                throw new ServerException("Issue to parse transaction response", "parsing-issue");
-            }
+        JSONParser parser = new JSONParser();
+        try {
+            return (JSONArray) parser.parse(this.executeRequest("GET", endpoint, date));
+        } catch (ParseException e) {
+            throw new ServerException("Issue to parse transaction response", "parsing-issue");
         }
     }
 
     public JSONArray getTransactions(String[] ids) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException {
         return this.getTransactions(ids, null);
+    }
+
+    /**
+     * Reprocess transaction at the operators level to confirm the status of a transaction
+     * @param ids list of transaction ids
+     * @param date date to consider in the request
+     * @return List of the transactions processed
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     * @throws ServerException
+     * @throws ServiceNotFoundException
+     * @throws PermissionDeniedException
+     * @throws InvalidClientRequestException
+     */
+    public JSONArray checkTransactions(String[] ids, Date date) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
+        String endpoint = "payment/transactions/check/?ids=" + String.join(",", ids);
+
+        if (date == null) {
+            date = new Date();
+        }
+
+        JSONParser parser = new JSONParser();
+        try {
+            return (JSONArray) parser.parse(this.executeRequest("GET", endpoint, date));
+        } catch (ParseException e) {
+            throw new ServerException("Issue to parse transaction response", "parsing-issue");
+        }
+    }
+
+    public JSONArray checkTransactions(String[] ids) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException {
+        return this.checkTransactions(ids, null);
     }
 }

@@ -4,8 +4,6 @@ import org.json.simple.JSONObject;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
@@ -17,27 +15,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 public class Signature {
-    public static String nonceGenerator() {
-        return nonceGenerator(40);
-    }
-
-    /**
-     * Generate a random string by the length
-     *
-     * @param length size of the nonce to generate
-     * @return String
-     */
-    public static String nonceGenerator(int length) {
-        String characters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        StringBuilder s = new StringBuilder(length);
-        int i;
-        for ( i=0; i<length; i++) {
-            int ch = (int)(characters.length() * Math.random());
-            s.append(characters.charAt(ch));
-        }
-        return s.toString();
-    }
-
     public static String bytesToHex(byte[] bytes) {
         final char[] hexArray = "0123456789abcdef".toCharArray();
         char[] hexChars = new char[bytes.length * 2];
@@ -62,7 +39,7 @@ public class Signature {
     }
 
     public static String signRequest(String service, String method, String url, Date date, String nonce, Map<String, String> credentials, TreeMap<String, String> headers, Map<String, Object> body) throws MalformedURLException, NoSuchAlgorithmException, InvalidKeyException {
-        String algorithm = Settings.ALGORITHM;
+        String algorithm = MeSomb.algorithm;
         URL parse = new URL(url);
         String canonicalQuery = parse.getQuery() != null ? parse.getQuery() : "";
 

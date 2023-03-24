@@ -25,7 +25,6 @@
 ```JAVA
 package com.hachther.mesomb.operations;
 
-import com.hachther.mesomb.Settings;
 import com.hachther.mesomb.Signature;
 import com.hachther.mesomb.exceptions.InvalidClientRequestException;
 import com.hachther.mesomb.exceptions.PermissionDeniedException;
@@ -53,7 +52,6 @@ class Test {
 ```JAVA
 package com.hachther.mesomb.operations;
 
-import com.hachther.mesomb.Settings;
 import com.hachther.mesomb.Signature;
 import com.hachther.mesomb.exceptions.InvalidClientRequestException;
 import com.hachther.mesomb.exceptions.PermissionDeniedException;
@@ -81,7 +79,6 @@ class Test {
 ```JAVA
 package com.hachther.mesomb.operations;
 
-import com.hachther.mesomb.Settings;
 import com.hachther.mesomb.Signature;
 import com.hachther.mesomb.exceptions.InvalidClientRequestException;
 import com.hachther.mesomb.exceptions.PermissionDeniedException;
@@ -108,7 +105,6 @@ class Test {
 ```JAVA
 package com.hachther.mesomb.operations;
 
-import com.hachther.mesomb.Settings;
 import com.hachther.mesomb.Signature;
 import com.hachther.mesomb.exceptions.InvalidClientRequestException;
 import com.hachther.mesomb.exceptions.PermissionDeniedException;
