@@ -18,6 +18,54 @@
 
 ### 🏠 [Homepage](https://mesomb.com)
 
+## Installation
+
+### Gradle
+
+#### Step 1. Add the JitPack repository to your build file
+
+Add it in your root build.gradle at the end of repositories:
+```Gradle
+allprojects {
+    repositories {
+        ...
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+#### Step 2. Add the dependency
+
+```Gradle
+dependencies {
+    implementation 'com.github.hachther:mesomb-java:TAG'
+}
+```
+
+### Maven
+
+#### Step 1. Add the JitPack repository to your build file
+
+Add it in your root build.gradle at the end of repositories:
+```XML
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
+```
+
+#### Step 2. Add the dependency
+
+```XML
+<dependency>
+    <groupId>com.github.hachther</groupId>
+    <artifactId>mesomb-java</artifactId>
+    <version>Tag</version>
+</dependency>
+```
+
 ## Usage
 
 ### Collect money from an account
