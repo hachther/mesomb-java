@@ -72,10 +72,15 @@ public class PaymentOperation {
             }
         }
         switch (statusCode) {
-            case 404 -> throw new ServiceNotFoundException(message);
-            case 403, 401 -> throw new PermissionDeniedException(message);
-            case 400 -> throw new InvalidClientRequestException(message, code);
-            default -> throw new ServerException(message, code);
+            case 404:
+                throw new ServiceNotFoundException(message);
+            case 403:
+            case 401:
+                throw new PermissionDeniedException(message);
+            case 400:
+                throw new InvalidClientRequestException(message, code);
+            default:
+                throw new ServerException(message, code);
         }
     }
 

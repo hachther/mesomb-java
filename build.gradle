@@ -1,9 +1,10 @@
 plugins {
     id 'java-library'
+    id 'maven-publish'
 }
 
 group 'com.hachther.mesomb'
-version '1.0.0'
+version '1.0.1'
 
 repositories {
     mavenCentral()
@@ -19,4 +20,17 @@ dependencies {
 
 test {
     useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        myLib(MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url = uri("${buildDir}/publishing-repository")
+        }
+    }
 }
