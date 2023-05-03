@@ -4,6 +4,7 @@ import org.json.simple.JSONObject;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
@@ -67,7 +68,12 @@ public class Signature {
 
         String signedHeaders = String.join(";", headersKeys);
 
-        String path = URLEncoder.encode(parse.getPath(), StandardCharsets.UTF_8).replaceAll("%2F", "/");
+        String path;
+        try {
+            path = URLEncoder.encode(parse.getPath(), "UTF-8").replaceAll("%2F", "/");
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
 
         String canonicalRequest = method + "\n" + path + "\n" + canonicalQuery + "\n" + canonicalHeaders + "\n" + signedHeaders + "\n" + payloadHash;
 

@@ -94,7 +94,7 @@ public class PaymentOperation {
         String url = this.buildUrl(endpoint);
         String authorization;
         if (method.equals("POST")) {
-            authorization = this.getAuthorization(method, endpoint, date, nonce, new TreeMap<>() {{
+            authorization = this.getAuthorization(method, endpoint, date, nonce, new TreeMap<String, String>() {{
                 put("content-type", JSON.toString());
             }}, body);
         } else {
