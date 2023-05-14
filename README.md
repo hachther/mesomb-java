@@ -73,7 +73,7 @@ Add it in your root build.gradle at the end of repositories:
 ```JAVA
 package com.hachther.mesomb.operations;
 
-import com.hachther.mesomb.Signature;
+import com.hachther.mesomb.util.RandomGenerator;
 import com.hachther.mesomb.exceptions.InvalidClientRequestException;
 import com.hachther.mesomb.exceptions.PermissionDeniedException;
 import com.hachther.mesomb.exceptions.ServerException;
@@ -86,7 +86,7 @@ class Test {
     public static void main(String args[]) {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            TransactionResponse response = payment.makeCollect(100, "MTN", "677550203", new Date(), Signature.nonceGenerator());
+            TransactionResponse response = payment.makeCollect(100, "MTN", "677550203", new Date(), RandomGenerator.nonce());
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | ServerException |
                  ServiceNotFoundException | PermissionDeniedException | InvalidClientRequestException e) {
             throw new RuntimeException(e);
@@ -100,7 +100,7 @@ class Test {
 ```JAVA
 package com.hachther.mesomb.operations;
 
-import com.hachther.mesomb.Signature;
+import com.hachther.mesomb.util.RandomGenerator;
 import com.hachther.mesomb.exceptions.InvalidClientRequestException;
 import com.hachther.mesomb.exceptions.PermissionDeniedException;
 import com.hachther.mesomb.exceptions.ServerException;
@@ -113,7 +113,7 @@ class Test {
     public static void main(String args[]) {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            TransactionResponse response = payment.makeDeposit(100, "MTN", "677550203", new Date(), Signature.nonceGenerator());
+            TransactionResponse response = payment.makeDeposit(100, "MTN", "677550203", new Date(), RandomGenerator.nonce());
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | ServerException |
                  ServiceNotFoundException | PermissionDeniedException | InvalidClientRequestException e) {
             throw new RuntimeException(e);
@@ -127,7 +127,6 @@ class Test {
 ```JAVA
 package com.hachther.mesomb.operations;
 
-import com.hachther.mesomb.Signature;
 import com.hachther.mesomb.exceptions.InvalidClientRequestException;
 import com.hachther.mesomb.exceptions.PermissionDeniedException;
 import com.hachther.mesomb.exceptions.ServerException;
@@ -153,7 +152,6 @@ class Test {
 ```JAVA
 package com.hachther.mesomb.operations;
 
-import com.hachther.mesomb.Signature;
 import com.hachther.mesomb.exceptions.InvalidClientRequestException;
 import com.hachther.mesomb.exceptions.PermissionDeniedException;
 import com.hachther.mesomb.exceptions.ServerException;
