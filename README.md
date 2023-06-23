@@ -86,7 +86,12 @@ class Test {
     public static void main(String args[]) {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            TransactionResponse response = payment.makeCollect(100, "MTN", "677550203", new Date(), RandomGenerator.nonce());
+            TransactionResponse response = payment.makeCollect(new HashMap<String, Object>() {{
+                put("amount", 100);
+                put("service", "MTN");
+                put("payer", "670256547");
+                put("nonce", RandomGenerator.nonce());
+            }});
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | ServerException |
                  ServiceNotFoundException | PermissionDeniedException | InvalidClientRequestException e) {
             throw new RuntimeException(e);
@@ -113,7 +118,12 @@ class Test {
     public static void main(String args[]) {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            TransactionResponse response = payment.makeDeposit(100, "MTN", "677550203", new Date(), RandomGenerator.nonce());
+            TransactionResponse response = payment.makeDeposit(new HashMap<String, Object>() {{
+                put("amount", 100);
+                put("service", "MTN");
+                put("receiver", "670256547");
+                put("nonce", RandomGenerator.nonce());
+            }});
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | ServerException |
                  ServiceNotFoundException | PermissionDeniedException | InvalidClientRequestException e) {
             throw new RuntimeException(e);

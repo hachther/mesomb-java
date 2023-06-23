@@ -16,7 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Date;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -27,14 +27,20 @@ public class PaymentOperationTest {
 
     @BeforeEach
     public void onSetup() {
-        MeSomb.apiBase = "http://192.168.8.102:8000";
+        MeSomb.apiBase = "http://192.168.8.99:8000";
+        MeSomb.requestTimeout = 60;
     }
 
     @Test
     public void testMakeCollectWithServiceNotFound() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey + "f", this.accessKey, this.secretKey);
         Exception exception = assertThrows(ServiceNotFoundException.class, () -> {
-            payment.makeCollect(5, "MTN", "677550203", new Date(), "fihser");
+            payment.makeCollect(new HashMap<String, Object>() {{
+                put("amount", 5);
+                put("service", "MTN");
+                put("payer", "670000000");
+                put("nonce", "fihser");
+            }});
         });
         Assertions.assertEquals("Application not found", exception.getMessage());
     }
@@ -43,7 +49,12 @@ public class PaymentOperationTest {
     public void testMakeCollectWithPermissionDenied() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey + "f", this.secretKey);
         Exception exception = assertThrows(PermissionDeniedException.class, () -> {
-            payment.makeCollect(5, "MTN", "677550203", new Date(), "fihser");
+            payment.makeCollect(new HashMap<String, Object>() {{
+                put("amount", 5);
+                put("service", "MTN");
+                put("payer", "670000000");
+                put("nonce", "fihser");
+            }});
         });
         Assertions.assertEquals("Invalid access key", exception.getMessage());
     }
@@ -52,7 +63,12 @@ public class PaymentOperationTest {
     public void testMakeCollectWithInvalidAmount() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         Exception exception = assertThrows(InvalidClientRequestException.class, () -> {
-            payment.makeCollect(5, "MTN", "677550203", new Date(), "fihser");
+            payment.makeCollect(new HashMap<String, Object>() {{
+                put("amount", 5);
+                put("service", "MTN");
+                put("payer", "670000000");
+                put("nonce", "fihser");
+            }});
         });
         Assertions.assertEquals("The amount should be greater than 10 XAF", exception.getMessage());
     }
@@ -61,9 +77,72 @@ public class PaymentOperationTest {
     public void testMakeCollectWithSuccess() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            TransactionResponse response = payment.makeCollect(100, "MTN", "677550203", new Date(), RandomGenerator.nonce());
+            TransactionResponse response = payment.makeCollect(new HashMap<String, Object>() {{
+                put("amount", 100);
+                put("service", "MTN");
+                put("payer", "670000000");
+                put("nonce", RandomGenerator.nonce());
+                put("trxID", "1");
+            }});
             Assertions.assertTrue(response.isOperationSuccess());
             Assertions.assertTrue(response.isTransactionSuccess());
+            Assertions.assertEquals(response.status, "SUCCESS");
+            Assertions.assertEquals(response.transaction.amount, 97);
+            Assertions.assertEquals(response.transaction.fees, 3);
+            Assertions.assertEquals(response.transaction.b_party, "237670000000");
+            Assertions.assertEquals(response.transaction.country, "CM");
+            Assertions.assertEquals(response.transaction.currency, "XAF");
+            Assertions.assertEquals(response.transaction.reference, "1");
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | ServerException |
+                 ServiceNotFoundException | PermissionDeniedException | InvalidClientRequestException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    public void testMakeCollectWithSuccessAndProducts() {
+        PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
+        try {
+            List<Map<String, Object>> products  = new ArrayList<>();
+            products.add(new HashMap<String, Object>() {{
+                put("id", "SKU001");
+                put("name", "Sac a Main");
+                put("category", "Sac");
+            }});
+            TransactionResponse response = payment.makeCollect(new HashMap<String, Object>() {{
+                put("amount", 100);
+                put("service", "MTN");
+                put("payer", "670000000");
+                put("nonce", RandomGenerator.nonce());
+                put("products", products);
+                put("trxID", "1");
+                put("customer", new HashMap<String, Object>(){{
+                    put("phone", "+237677550439");
+                    put("email", "fisher.bank@gmail.com");
+                    put("first_name", "Fisher");
+                    put("last_name", "BANK");
+                }});
+                put("location", new HashMap<String, Object>(){{
+                    put("town", "Douala");
+                    put("country", "Cameroun");
+                }});
+            }});
+            Assertions.assertTrue(response.isOperationSuccess());
+            Assertions.assertTrue(response.isTransactionSuccess());
+            Assertions.assertEquals(response.transaction.products.length, 1);
+            Assertions.assertEquals(response.status, "SUCCESS");
+            Assertions.assertEquals(response.transaction.amount, 97);
+            Assertions.assertEquals(response.transaction.fees, 3);
+            Assertions.assertEquals(response.transaction.b_party, "237670000000");
+            Assertions.assertEquals(response.transaction.country, "CM");
+            Assertions.assertEquals(response.transaction.currency, "XAF");
+            Assertions.assertEquals(response.transaction.reference, "1");
+            Assertions.assertEquals(response.transaction.customer.phone, "+237677550439");
+            Assertions.assertEquals(response.transaction.customer.email, "fisher.bank@gmail.com");
+            Assertions.assertEquals(response.transaction.customer.first_name, "Fisher");
+            Assertions.assertEquals(response.transaction.customer.last_name, "BANK");
+            Assertions.assertEquals(response.transaction.location.town, "Douala");
+            Assertions.assertEquals(response.transaction.location.country, "Cameroun");
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | ServerException |
                  ServiceNotFoundException | PermissionDeniedException | InvalidClientRequestException e) {
             throw new RuntimeException(e);
@@ -74,7 +153,13 @@ public class PaymentOperationTest {
     public void testMakeCollectWithPending() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            TransactionResponse response = payment.makeCollect(100, "MTN", "677550203", new Date(), RandomGenerator.nonce(), "CM", "XAF", true, "asynchronous");
+            TransactionResponse response = payment.makeCollect(new HashMap<String, Object>() {{
+                put("amount", 100);
+                put("service", "MTN");
+                put("payer", "670000000");
+                put("nonce", RandomGenerator.nonce());
+                put("mode", "asynchronous");
+            }});
             Assertions.assertTrue(response.isOperationSuccess());
             Assertions.assertFalse(response.isTransactionSuccess());
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | ServerException |
@@ -87,7 +172,12 @@ public class PaymentOperationTest {
     public void testMakeDepositWithServiceNotFound() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey + "f", this.accessKey, this.secretKey);
         Exception exception = assertThrows(ServiceNotFoundException.class, () -> {
-            payment.makeDeposit(5, "MTN", "677550203", new Date(), "fihser");
+            payment.makeDeposit(new HashMap<String, Object>() {{
+                put("amount", 5);
+                put("service", "MTN");
+                put("receiver", "670000000");
+                put("nonce", "fihser");
+            }});
         });
         Assertions.assertEquals("Application not found", exception.getMessage());
     }
@@ -96,7 +186,12 @@ public class PaymentOperationTest {
     public void testMakeDepositWithPermissionDenied() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey + "f", this.secretKey);
         Exception exception = assertThrows(PermissionDeniedException.class, () -> {
-            payment.makeDeposit(5, "MTN", "677550203", new Date(), "fihser");
+            payment.makeDeposit(new HashMap<String, Object>() {{
+                put("amount", 5);
+                put("service", "MTN");
+                put("receiver", "670000000");
+                put("nonce", "fihser");
+            }});
         });
         Assertions.assertEquals("Invalid access key", exception.getMessage());
     }
@@ -105,7 +200,12 @@ public class PaymentOperationTest {
     public void testMakeDepositWithInvalidAmount() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         Exception exception = assertThrows(InvalidClientRequestException.class, () -> {
-            payment.makeDeposit(5, "MTN", "677550203", new Date(), "fihser");
+            payment.makeDeposit(new HashMap<String, Object>() {{
+                put("amount", 5);
+                put("service", "MTN");
+                put("receiver", "670000000");
+                put("nonce", "fihser");
+            }});
         });
         Assertions.assertEquals("The amount should be greater than 10 XAF", exception.getMessage());
     }
@@ -114,9 +214,22 @@ public class PaymentOperationTest {
     public void testMakeDepositWithSuccess() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            TransactionResponse response = payment.makeDeposit(100, "MTN", "677550203", new Date(), RandomGenerator.nonce());
+            TransactionResponse response = payment.makeDeposit(new HashMap<String, Object>() {{
+                put("amount", 100);
+                put("service", "MTN");
+                put("receiver", "670000000");
+                put("nonce", RandomGenerator.nonce());
+                put("trxID", "1");
+            }});
             Assertions.assertTrue(response.isOperationSuccess());
             Assertions.assertTrue(response.isTransactionSuccess());
+            Assertions.assertEquals(response.status, "SUCCESS");
+            Assertions.assertEquals(response.transaction.amount, 100);
+            Assertions.assertEquals(response.transaction.fees, 0);
+            Assertions.assertEquals(response.transaction.b_party, "237670000000");
+            Assertions.assertEquals(response.transaction.country, "CM");
+            Assertions.assertEquals(response.transaction.currency, "XAF");
+            Assertions.assertEquals(response.transaction.reference, "1");
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | ServerException |
                  ServiceNotFoundException | PermissionDeniedException | InvalidClientRequestException e) {
             throw new RuntimeException(e);

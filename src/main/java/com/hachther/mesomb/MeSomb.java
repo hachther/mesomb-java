@@ -25,6 +25,9 @@ public class MeSomb {
     /** Maximum number of request retries */
     public static int maxNetworkRetries = 0;
 
+    /** Initial delay between retries, in seconds */
+    public static int requestTimeout = 30;
+
     /** Whether client telemetry is enabled. Defaults to true. */
     public static boolean enableTelemetry = true;
 
