@@ -7,6 +7,8 @@ import com.hachther.mesomb.exceptions.PermissionDeniedException;
 import com.hachther.mesomb.exceptions.ServerException;
 import com.hachther.mesomb.exceptions.ServiceNotFoundException;
 import com.hachther.mesomb.models.Application;
+import com.hachther.mesomb.models.Product;
+import com.hachther.mesomb.models.Transaction;
 import com.hachther.mesomb.models.TransactionResponse;
 import okhttp3.*;
 import org.json.simple.JSONArray;
@@ -366,18 +368,23 @@ public class PaymentOperation {
      * @throws PermissionDeniedException
      * @throws InvalidClientRequestException
      */
-    public JSONArray getTransactions(String[] ids, String source) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
+    public Transaction[] getTransactions(String[] ids, String source) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
         String endpoint = "payment/transactions/?ids=" + String.join(",", ids) + "&source=" + source;
 
         JSONParser parser = new JSONParser();
         try {
-            return (JSONArray) parser.parse(this.executeRequest("GET", endpoint, new Date()));
+            JSONArray response = (JSONArray) parser.parse(this.executeRequest("GET", endpoint, new Date()));
+            Transaction[] transactions = new Transaction[response.size()];
+            for (int i = 0; i < response.size(); i++) {
+                transactions[i] = new Transaction((JSONObject) response.get(i));
+            }
+            return transactions;
         } catch (ParseException e) {
             throw new ServerException("Issue to parse transaction response", "parsing-issue");
         }
     }
 
-    public JSONArray getTransactions(String[] ids) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException {
+    public Transaction[] getTransactions(String[] ids) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException {
         return this.getTransactions(ids, "MESOMB");
     }
 
@@ -394,18 +401,23 @@ public class PaymentOperation {
      * @throws PermissionDeniedException
      * @throws InvalidClientRequestException
      */
-    public JSONArray checkTransactions(String[] ids, String source) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
+    public Transaction[] checkTransactions(String[] ids, String source) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
         String endpoint = "payment/transactions/check/?ids=" + String.join(",", ids) + "&source=" + source;
 
         JSONParser parser = new JSONParser();
         try {
-            return (JSONArray) parser.parse(this.executeRequest("GET", endpoint, new Date()));
+            JSONArray response = (JSONArray) parser.parse(this.executeRequest("GET", endpoint, new Date()));
+            Transaction[] transactions = new Transaction[response.size()];
+            for (int i = 0; i < response.size(); i++) {
+                transactions[i] = new Transaction((JSONObject) response.get(i));
+            }
+            return transactions;
         } catch (ParseException e) {
             throw new ServerException("Issue to parse transaction response", "parsing-issue");
         }
     }
 
-    public JSONArray checkTransactions(String[] ids) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException {
+    public Transaction[] checkTransactions(String[] ids) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException {
         return this.checkTransactions(ids, "MESOMB");
     }
 }

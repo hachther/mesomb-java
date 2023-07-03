@@ -1,6 +1,7 @@
 package com.hachther.mesomb.operations;
 
 import com.hachther.mesomb.MeSomb;
+import com.hachther.mesomb.models.Transaction;
 import com.hachther.mesomb.util.RandomGenerator;
 import com.hachther.mesomb.exceptions.InvalidClientRequestException;
 import com.hachther.mesomb.exceptions.PermissionDeniedException;
@@ -27,7 +28,7 @@ public class PaymentOperationTest {
 
     @BeforeEach
     public void onSetup() {
-        MeSomb.apiBase = "http://192.168.8.99:8000";
+        MeSomb.apiBase = "http://192.168.8.107:8000";
         MeSomb.requestTimeout = 60;
     }
 
@@ -162,6 +163,7 @@ public class PaymentOperationTest {
             }});
             Assertions.assertTrue(response.isOperationSuccess());
             Assertions.assertFalse(response.isTransactionSuccess());
+            Assertions.assertEquals(response.transaction.status, "PENDING");
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | ServerException |
                  ServiceNotFoundException | PermissionDeniedException | InvalidClientRequestException e) {
             throw new RuntimeException(e);
@@ -308,8 +310,9 @@ public class PaymentOperationTest {
     public void testGetTransactionsSuccess() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            JSONArray transactions = payment.getTransactions(new String[]{"9886f099-dee2-4eaa-9039-e92b2ee33353"});
-            Assertions.assertEquals(1, transactions.size());
+            Transaction[] transactions = payment.getTransactions(new String[]{"9886f099-dee2-4eaa-9039-e92b2ee33353"});
+            Assertions.assertEquals(1, transactions.length);
+            Assertions.assertEquals("9886f099-dee2-4eaa-9039-e92b2ee33353", transactions[0].pk);
         } catch (ServerException | ServiceNotFoundException | PermissionDeniedException | IOException |
                  NoSuchAlgorithmException | InvalidClientRequestException | InvalidKeyException e) {
             throw new RuntimeException(e);
@@ -338,8 +341,9 @@ public class PaymentOperationTest {
     public void testCheckTransactionsSuccess() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            JSONArray transactions = payment.checkTransactions(new String[]{"9886f099-dee2-4eaa-9039-e92b2ee33353"});
-            Assertions.assertEquals(1, transactions.size());
+            Transaction[] transactions = payment.checkTransactions(new String[]{"9886f099-dee2-4eaa-9039-e92b2ee33353"});
+            Assertions.assertEquals(1, transactions.length);
+            Assertions.assertEquals("9886f099-dee2-4eaa-9039-e92b2ee33353", transactions[0].pk);
         } catch (ServerException | ServiceNotFoundException | PermissionDeniedException | IOException |
                  NoSuchAlgorithmException | InvalidClientRequestException | InvalidKeyException e) {
             throw new RuntimeException(e);

@@ -7,7 +7,7 @@ import java.text.SimpleDateFormat;
 
 public class Transaction {
     public String pk;
-    public String success;
+    public String status;
     public String type;
     public Double amount;
     public Double fees;
@@ -26,7 +26,7 @@ public class Transaction {
 
     public Transaction(JSONObject data) {
         this.pk = (String) data.get("pk");
-        this.success = (String) data.get("success");
+        this.status = (String) data.get("status");
         this.type = (String) data.get("type");
         Object amount = data.get("amount");
         if (amount instanceof Double) {
