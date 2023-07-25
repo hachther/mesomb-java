@@ -3,25 +3,34 @@ package com.hachther.mesomb.models;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
-import java.util.Arrays;
+import java.util.Map;
+import java.util.Objects;
 
 public class Application {
-    private final String key;
-    private final String logo;
-    private final JSONArray balances;
-    private final JSONArray countries;
-    private final String description;
-    private final boolean isLive;
-    private final String name;
-    private final JSONObject security;
-    private final String status;
-    private final String url;
+    public final String key;
+    public final String logo;
+    public final ApplicationBalance[] balances;
+    public final String[] countries;
+    public final String description;
+    public final boolean isLive;
+    public final String name;
+    public final Map<String, Object> security;
+    public final String status;
+    public final String url;
 
     public Application(JSONObject data) {
         this.key = (String) data.get("key");
         this.logo = (String) data.get("logo");
-        this.balances = (JSONArray) data.get("balances");
-        this.countries = (JSONArray) data.get("countries");
+        JSONArray balances = (JSONArray) data.get("balances");
+        this.balances = new ApplicationBalance[balances.size()];
+        for (int i = 0; i < balances.size(); i++) {
+            this.balances[i] = new ApplicationBalance((JSONObject) balances.get(i));
+        }
+        JSONArray countries = (JSONArray) data.get("countries");
+        this.countries = new String[countries.size()];
+        for (int i = 0; i < countries.size(); i++) {
+            this.countries[i] = (String) countries.get(i);
+        }
         this.description = (String) data.get("description");
         this.isLive = (boolean) data.get("is_live");
         this.name = (String) data.get("name");
@@ -30,50 +39,17 @@ public class Application {
         this.url = (String) data.get("url");
     }
 
-    public String getKey() {
-        return key;
-    }
-
-    public String getLogo() {
-        return logo;
-    }
-
-    public JSONArray getCountries() {
-        return countries;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public boolean isLive() {
-        return isLive;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
     public float getBalance(String country, String service) {
         float balance = 0;
-        for (Object o : this.balances) {
-            JSONObject bal = (JSONObject) o;
-            if (country != null && bal.get("country") != country) {
+        for (ApplicationBalance bal : this.balances) {
+            if (country != null && !Objects.equals(bal.country, country)) {
                 continue;
             }
-            if (service != null && bal.get("service") != service) {
+            if (service != null && !Objects.equals(bal.provider, service)) {
                 continue;
             }
 
-            balance += (float) bal.get("value");
+            balance += bal.value;
         }
         return balance;
     }

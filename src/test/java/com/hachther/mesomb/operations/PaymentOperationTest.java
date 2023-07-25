@@ -281,7 +281,8 @@ public class PaymentOperationTest {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
             Application application = payment.getStatus();
-            Assertions.assertEquals("Meudocta Shop", application.getName());
+            Assertions.assertEquals("Meudocta Shop", application.name);
+            Assertions.assertArrayEquals(new String[]{"CM", "NE"}, application.countries);
         } catch (ServerException | ServiceNotFoundException | PermissionDeniedException | IOException |
                  NoSuchAlgorithmException | InvalidClientRequestException | InvalidKeyException e) {
             throw new RuntimeException(e);
