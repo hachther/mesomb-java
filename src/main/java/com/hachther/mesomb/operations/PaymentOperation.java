@@ -103,6 +103,8 @@ public class PaymentOperation {
             body.remove("trxID");
         }
         if (method.equals("POST")) {
+            assert body != null;
+            body.put("source", "MeSombJava/" + MeSomb.version);
             authorization = this.getAuthorization(method, endpoint, date, nonce, new TreeMap<String, String>() {{
                 put("content-type", JSON.toString());
             }}, body);
@@ -151,7 +153,7 @@ public class PaymentOperation {
      *               - mode: asynchronous or synchronous
      *               - conversion: true in case of foreign currently defined if you want to rely on MeSomb to convert the amount in the local currency
      *               - location: Map containing the location of the customer with the following attributes: town, region and location all string.
-     *               - products: It is array of products. Each product are Map with the following attributes: name string, category string, quantity int and amount float
+     *               - products: It is ArrayList of products. Each product are Map with the following attributes: name string, category string, quantity int and amount float
      *               - customer: a Map containing information about the customer: phone string, email: string, first_name string, last_name string, address string, town string, region string and country string
      *               - trxID: if you want to include your transaction ID in the request
      *               - extra: Map to add some extra attribute depending on the API documentation

@@ -64,7 +64,7 @@ public class Signature {
         }
         String canonicalHeaders = String.join("\n", headersTokens);
 
-        String payloadHash = sha1(body != null ? JSONObject.toJSONString(body) : "{}");
+        String payloadHash = sha1(body != null ? JSONObject.toJSONString(body) .replace("\\/", "/"): "{}");
 
         String signedHeaders = String.join(";", headersKeys);
 

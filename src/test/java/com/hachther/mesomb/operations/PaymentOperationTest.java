@@ -144,6 +144,7 @@ public class PaymentOperationTest {
             Assertions.assertEquals(response.transaction.customer.last_name, "BANK");
             Assertions.assertEquals(response.transaction.location.town, "Douala");
             Assertions.assertEquals(response.transaction.location.country, "Cameroun");
+            Assertions.assertEquals(response.transaction.products.length, 1);
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | ServerException |
                  ServiceNotFoundException | PermissionDeniedException | InvalidClientRequestException e) {
             throw new RuntimeException(e);
