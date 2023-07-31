@@ -15,7 +15,18 @@ import java.util.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+/**
+ * This class is used to generate the signature for each request.
+ *
+ * This signature generated will be added at the "Authorisation" header for each request
+ */
 public class Signature {
+
+    /**
+     * Convert array of by to hexadecimal varchar
+     * @param bytes
+     * @return
+     */
     public static String bytesToHex(byte[] bytes) {
         final char[] hexArray = "0123456789abcdef".toCharArray();
         char[] hexChars = new char[bytes.length * 2];
@@ -27,6 +38,12 @@ public class Signature {
         return new String(hexChars);
     }
 
+    /**
+     * Hash a string with SHA1 algorithm
+     * @param input string to hash
+     * @return hashed string
+     * @throws NoSuchAlgorithmException
+     */
     public static String sha1(String input) throws NoSuchAlgorithmException {
         MessageDigest md = MessageDigest.getInstance("SHA-1");
 
@@ -39,6 +56,21 @@ public class Signature {
         return bytesToHex(mac.doFinal(input.getBytes()));
     }
 
+    /**
+     *
+     * @param service name of the mesomb service (Expl: payment)
+     * @param method HTTP method
+     * @param url the url of the HTTP Request
+     * @param date the datetime of the transaction
+     * @param nonce random generated string that should be unique on each POST request
+     * @param credentials MeSomb credential (accessKey and the secretKey)
+     * @param headers HTTP headers of the request
+     * @param body body of the request in case of POST request
+     * @return
+     * @throws MalformedURLException
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     */
     public static String signRequest(String service, String method, String url, Date date, String nonce, Map<String, String> credentials, TreeMap<String, String> headers, Map<String, Object> body) throws MalformedURLException, NoSuchAlgorithmException, InvalidKeyException {
         String algorithm = MeSomb.algorithm;
         URL parse = new URL(url);

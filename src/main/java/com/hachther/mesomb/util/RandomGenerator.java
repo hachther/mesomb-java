@@ -1,5 +1,8 @@
 package com.hachther.mesomb.util;
 
+/**
+ * Helper class to generate random string for nonce
+ */
 public class RandomGenerator {
     public static String nonce() {
         return nonce(40);

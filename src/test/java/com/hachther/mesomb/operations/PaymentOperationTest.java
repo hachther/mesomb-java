@@ -28,7 +28,7 @@ public class PaymentOperationTest {
 
     @BeforeEach
     public void onSetup() {
-        MeSomb.apiBase = "http://192.168.8.107:8000";
+        MeSomb.apiBase = "http://192.168.8.101:8000";
         MeSomb.requestTimeout = 60;
     }
 
