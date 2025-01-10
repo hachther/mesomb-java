@@ -28,7 +28,7 @@ public class PaymentOperationTest {
 
     @BeforeEach
     public void onSetup() {
-        MeSomb.apiBase = "http://192.168.8.101:8000";
+        MeSomb.apiBase = "http://127.0.0.1:8000";
         MeSomb.requestTimeout = 60;
     }
 
@@ -88,8 +88,8 @@ public class PaymentOperationTest {
             Assertions.assertTrue(response.isOperationSuccess());
             Assertions.assertTrue(response.isTransactionSuccess());
             Assertions.assertEquals(response.status, "SUCCESS");
-            Assertions.assertEquals(response.transaction.amount, 97);
-            Assertions.assertEquals(response.transaction.fees, 3);
+            Assertions.assertEquals(response.transaction.amount, 98);
+            Assertions.assertEquals(response.transaction.fees, 2);
             Assertions.assertEquals(response.transaction.b_party, "237670000000");
             Assertions.assertEquals(response.transaction.country, "CM");
             Assertions.assertEquals(response.transaction.currency, "XAF");
@@ -312,9 +312,9 @@ public class PaymentOperationTest {
     public void testGetTransactionsSuccess() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            Transaction[] transactions = payment.getTransactions(new String[]{"9886f099-dee2-4eaa-9039-e92b2ee33353"});
+            Transaction[] transactions = payment.getTransactions(new String[]{"00440457-61a6-485a-8437-eb4fa044d204"});
             Assertions.assertEquals(1, transactions.length);
-            Assertions.assertEquals("9886f099-dee2-4eaa-9039-e92b2ee33353", transactions[0].pk);
+            Assertions.assertEquals("00440457-61a6-485a-8437-eb4fa044d204", transactions[0].pk);
         } catch (ServerException | ServiceNotFoundException | PermissionDeniedException | IOException |
                  NoSuchAlgorithmException | InvalidClientRequestException | InvalidKeyException e) {
             throw new RuntimeException(e);
@@ -343,9 +343,9 @@ public class PaymentOperationTest {
     public void testCheckTransactionsSuccess() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            Transaction[] transactions = payment.checkTransactions(new String[]{"9886f099-dee2-4eaa-9039-e92b2ee33353"});
+            Transaction[] transactions = payment.checkTransactions(new String[]{"00440457-61a6-485a-8437-eb4fa044d204"});
             Assertions.assertEquals(1, transactions.length);
-            Assertions.assertEquals("9886f099-dee2-4eaa-9039-e92b2ee33353", transactions[0].pk);
+            Assertions.assertEquals("00440457-61a6-485a-8437-eb4fa044d204", transactions[0].pk);
         } catch (ServerException | ServiceNotFoundException | PermissionDeniedException | IOException |
                  NoSuchAlgorithmException | InvalidClientRequestException | InvalidKeyException e) {
             throw new RuntimeException(e);

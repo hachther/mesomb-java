@@ -43,7 +43,7 @@ public class PaymentOperation {
     }
 
     private String buildUrl(String endpoint) {
-        return MeSomb.apiBase + "/en/api/" + MeSomb.apiVersion + "/" + endpoint;
+        return MeSomb.apiBase + "/api/" + MeSomb.apiVersion + "/" + endpoint;
     }
 
     private String getAuthorization(String method, String endpoint, Date date, String nonce, TreeMap<String, String> headers, Map<String, Object> body) throws MalformedURLException, UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeyException {
@@ -120,7 +120,8 @@ public class PaymentOperation {
                 .addHeader("x-mesomb-date", String.valueOf(date.getTime() / 1000))
                 .addHeader("x-mesomb-nonce", nonce)
                 .addHeader("Authorization", authorization)
-                .addHeader("X-MeSomb-Application", this.applicationKey);
+                .addHeader("X-MeSomb-Application", this.applicationKey)
+                .addHeader("Accept-Language", MeSomb.language);
         if (mode != null) {
             builder = builder.addHeader("X-MeSomb-OperationMode", mode);
         }

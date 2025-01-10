@@ -26,7 +26,8 @@
 
 Add it in your root build.gradle at the end of repositories:
 ```Gradle
-allprojects {
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         ...
         maven { url 'https://jitpack.io' }
@@ -38,7 +39,7 @@ allprojects {
 
 ```Gradle
 dependencies {
-    implementation 'com.github.hachther:mesomb-java:TAG'
+    implementation 'com.github.hachther:mesomb-java:1.1.3'
 }
 ```
 
