@@ -3,13 +3,28 @@ package com.hachther.mesomb.models;
 import org.json.simple.JSONObject;
 
 public class Customer {
+    /// The email of the customer
     public final String email;
+
+    /// The phone number of the customer
     public final String phone;
+
+    /// The town of the customer
     public final String town;
+
+    /// The region of the customer
     public final String region;
+
+    /// The country of the customer
     public final String country;
-    public final String first_name;
-    public final String last_name;
+
+    /// The first name of the customer
+    public final String firstName;
+
+    /// The last name of the customer
+    public final String lastName;
+
+    /// The address of the customer
     public final String address;
 
     public Customer(JSONObject obj) {
@@ -18,8 +33,8 @@ public class Customer {
         this.town = (String) obj.getOrDefault("town", null);
         this.region = (String) obj.getOrDefault("region", null);
         this.country = (String) obj.getOrDefault("country", null);
-        this.first_name = (String) obj.getOrDefault("first_name", null);
-        this.last_name = (String) obj.getOrDefault("last_name", null);
+        this.firstName = (String) obj.getOrDefault("first_name", null);
+        this.lastName = (String) obj.getOrDefault("last_name", null);
         this.address = (String) obj.getOrDefault("address", null);
     }
 }

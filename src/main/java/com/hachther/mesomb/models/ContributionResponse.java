@@ -5,20 +5,16 @@ import org.json.simple.JSONObject;
 import java.text.ParseException;
 import java.util.Objects;
 
-public class TransactionResponse {
+public class ContributionResponse {
     public final boolean success;
     public final String message;
-    public final String redirect;
-    public final Transaction transaction;
-    public final String reference;
+    public final Contribution contribution;
     public final String status;
 
-    public TransactionResponse(JSONObject data) throws ParseException {
+    public ContributionResponse(JSONObject data) throws ParseException {
         this.success = (boolean) data.get("success");
         this.message = (String) data.get("message");
-        this.redirect = (String) data.get("redirect");
-        this.transaction = new Transaction((JSONObject) data.get("transaction"));
-        this.reference = (String) data.get("reference");
+        this.contribution = new Contribution((JSONObject) data.get("contribution"));
         this.status = (String) data.get("status");
     }
 
@@ -27,7 +23,7 @@ public class TransactionResponse {
         return this.success;
     }
 
-    public boolean isTransactionSuccess() {
+    public boolean isContributionSuccess() {
         return this.success && Objects.equals(this.status, "SUCCESS");
     }
 }

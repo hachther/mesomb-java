@@ -1,176 +1,68 @@
 package com.hachther.mesomb.operations;
 
-import com.hachther.mesomb.MeSomb;
-import com.hachther.mesomb.Signature;
 import com.hachther.mesomb.exceptions.InvalidClientRequestException;
 import com.hachther.mesomb.exceptions.PermissionDeniedException;
 import com.hachther.mesomb.exceptions.ServerException;
 import com.hachther.mesomb.exceptions.ServiceNotFoundException;
 import com.hachther.mesomb.models.Application;
-import com.hachther.mesomb.models.Product;
 import com.hachther.mesomb.models.Transaction;
 import com.hachther.mesomb.models.TransactionResponse;
-import okhttp3.*;
+import com.hachther.mesomb.util.RandomGenerator;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Containing all operations provided by MeSomb Payment Service.
- * [Check the documentation here](https://mesomb.hachther.com/en/api/v1.1/schema/)
  */
-public class PaymentOperation {
-    public static final MediaType JSON
-            = MediaType.get("application/json; charset=utf-8");
-
-    private final String applicationKey;
-    private final String accessKey;
-    private final String secretKey;
+public class PaymentOperation extends AOperation {
+    public PaymentOperation(String applicationKey, String accessKey, String secretKey, String language) {
+        super(applicationKey, accessKey, secretKey, language);
+    }
 
     public PaymentOperation(String applicationKey, String accessKey, String secretKey) {
-        this.applicationKey = applicationKey;
-        this.accessKey = accessKey;
-        this.secretKey = secretKey;
-    }
-
-    private String buildUrl(String endpoint) {
-        return MeSomb.apiBase + "/api/" + MeSomb.apiVersion + "/" + endpoint;
-    }
-
-    private String getAuthorization(String method, String endpoint, Date date, String nonce, TreeMap<String, String> headers, Map<String, Object> body) throws MalformedURLException, UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeyException {
-        String url = this.buildUrl(endpoint);
-
-        Map<String, String> credentials = new HashMap<>();
-        credentials.put("accessKey", this.accessKey);
-        credentials.put("secretKey", this.secretKey);
-
-        return Signature.signRequest("payment", method, url, date, nonce, credentials, headers, body);
-    }
-
-    private String getAuthorization(String method, String endpoint, Date date, String nonce) throws MalformedURLException, UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeyException {
-        return this.getAuthorization(method, endpoint, date, nonce, null, null);
-    }
-
-
-    private void processClientException(int statusCode, String response) throws IOException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException, ServerException {
-        String code = null;
-        String message = response;
-        if (message.startsWith("{")) {
-            JSONParser parser = new JSONParser();
-            try {
-                JSONObject data = (JSONObject) parser.parse(message);
-                message = (String) data.get("detail");
-                code = (String) data.get("code");
-            } catch (ParseException ignored) {
-            }
-        }
-        switch (statusCode) {
-            case 404:
-                throw new ServiceNotFoundException(message);
-            case 403:
-            case 401:
-                throw new PermissionDeniedException(message);
-            case 400:
-                throw new InvalidClientRequestException(message, code);
-            default:
-                throw new ServerException(message, code);
-        }
-    }
-
-    private String executeRequest(String method, String endpoint, Date date) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidClientRequestException, ServerException, ServiceNotFoundException, PermissionDeniedException {
-        return this.executeRequest(method, endpoint, date, "", null, null);
-    }
-
-    private String executeRequest(String method, String endpoint, Date date, String nonce, Map<String, Object> body) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidClientRequestException, ServerException, ServiceNotFoundException, PermissionDeniedException {
-        return this.executeRequest(method, endpoint, date, nonce, body, null);
-    }
-
-    private String executeRequest(String method, String endpoint, Date date, String nonce, Map<String, Object> body, String mode) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidClientRequestException, ServerException, ServiceNotFoundException, PermissionDeniedException {
-        String url = this.buildUrl(endpoint);
-        String authorization;
-        String trxID = null;
-        if (body != null && body.containsKey("trxID")) {
-            trxID = (String) body.get("trxID");
-            body.remove("trxID");
-        }
-        if (method.equals("POST")) {
-            assert body != null;
-            body.put("source", "MeSombJava/" + MeSomb.version);
-            authorization = this.getAuthorization(method, endpoint, date, nonce, new TreeMap<String, String>() {{
-                put("content-type", JSON.toString());
-            }}, body);
-        } else {
-            authorization = this.getAuthorization(method, endpoint, date, nonce);
-        }
-
-        OkHttpClient client = new OkHttpClient.Builder().readTimeout(MeSomb.requestTimeout, TimeUnit.SECONDS).build();
-
-        Request.Builder builder = new Request.Builder()
-                .url(url)
-                .method(method, body != null ? RequestBody.create(JSONObject.toJSONString(body), JSON) : null)
-                .addHeader("x-mesomb-date", String.valueOf(date.getTime() / 1000))
-                .addHeader("x-mesomb-nonce", nonce)
-                .addHeader("Authorization", authorization)
-                .addHeader("X-MeSomb-Application", this.applicationKey)
-                .addHeader("Accept-Language", MeSomb.language);
-        if (mode != null) {
-            builder = builder.addHeader("X-MeSomb-OperationMode", mode);
-        }
-        if (trxID != null) {
-            builder = builder.addHeader("X-MeSomb-TrxID", trxID);
-        }
-
-        try (Response response = client.newCall(builder.build()).execute()) {
-            if (response.code() >= 400) {
-                assert response.body() != null;
-                this.processClientException(response.code(), response.body().string());
-            }
-            assert response.body() != null;
-            return response.body().string();
-        }
+        super(applicationKey, accessKey, secretKey, "en");
     }
 
     /**
-     * Collect money a user account
+     * Collects a payment using the provided parameters.
      *
-     * @param params object with the below information
-     *               - amount: amount to collect
-     *               - service: payment service with the possible values MTN, ORANGE, AIRTEL
-     *               - payer: account number to collect from
-     *               - date: date of the request
-     *               - nonce: unique string on each request
-     *               - country: 2 letters country code of the service (configured during your service registration in MeSomb)
-     *               - currency: currency of your service depending on your country
-     *               - fees: false if your want MeSomb fees to be computed and included in the amount to collect
-     *               - mode: asynchronous or synchronous
-     *               - conversion: true in case of foreign currently defined if you want to rely on MeSomb to convert the amount in the local currency
-     *               - location: Map containing the location of the customer with the following attributes: town, region and location all string.
-     *               - products: It is ArrayList of products. Each product are Map with the following attributes: name string, category string, quantity int and amount float
-     *               - customer: a Map containing information about the customer: phone string, email: string, first_name string, last_name string, address string, town string, region string and country string
-     *               - trxID: if you want to include your transaction ID in the request
-     *               - extra: Map to add some extra attribute depending on the API documentation
-     * @return {@link TransactionResponse}
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeyException
-     * @throws ServerException
-     * @throws ServiceNotFoundException
-     * @throws PermissionDeniedException
-     * @throws InvalidClientRequestException
+     * @param params a map containing the following keys:
+     *               - amount: the amount to collect (required)
+     *               - service: the payment service to use (required)
+     *               - payer: the payer's identifier (required)
+     *               - nonce: a unique string for each request (optional)
+     *               - country: the country code (optional, defaults to "CM")
+     *               - currency: the currency code (optional, defaults to "XAF")
+     *               - fees: whether to include fees (optional, defaults to true)
+     *               - conversion: whether to convert the amount (optional, defaults to false)
+     *               - trxID: the transaction ID (optional)
+     *               - location: Map (optional) containing the location of the customer with the following attributes: town, region and location all string.
+     *               - customer: Map (optional) containing information about the customer: phone string, email: string, first_name string, last_name string, address string, town string, region string and country string
+     *               - products: It is a List of products (optional). Each product are Map with the following attributes: name string, category string, quantity int and amount float
+     *               - extra: a map of extra attributes (optional)
+     *               - mode: the operation mode (optional, defaults to "synchronous")
+     * @return a TransactionResponse object containing the response from the server
+     * @throws IOException if an I/O error occurs
+     * @throws NoSuchAlgorithmException if the algorithm is not supported
+     * @throws InvalidKeyException if the key is invalid
+     * @throws ServerException if the server encounters an error
+     * @throws ServiceNotFoundException if the service is not found
+     * @throws PermissionDeniedException if permission is denied
+     * @throws InvalidClientRequestException if the request is invalid
+     * @throws ParseException if the response cannot be parsed
      */
-    public TransactionResponse makeCollect(Map<String, Object> params) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
+    public TransactionResponse makeCollect(Map<String, Object> params) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException, ParseException, java.text.ParseException {
         String endpoint = "payment/collect/";
-
-        Date date = (Date) params.getOrDefault("date", new Date());
 
         Map<String, Object> body = new HashMap<>();
         body.put("amount", params.get("amount"));
@@ -178,6 +70,7 @@ public class PaymentOperation {
         body.put("payer", params.get("payer"));
         body.put("country", params.getOrDefault("country", "CM"));
         body.put("currency", params.getOrDefault("currency", "XAF"));
+        body.put("amount_currency", params.getOrDefault("currency", "XAF"));
         body.put("fees", params.getOrDefault("fees", true));
         body.put("conversion", params.getOrDefault("conversion", false));
 
@@ -197,57 +90,39 @@ public class PaymentOperation {
             body.put("products", params.get("products"));
         }
 
-        if (params.getOrDefault("product", null) != null) {
-            List<Map<String, Object>> products = new ArrayList<>();
-            products.add((Map<String, Object>) params.get("product"));
-            body.put("products", products);
-        }
-
-        Map<String, Object> extra = (Map<String, Object>) params.getOrDefault("extra", null);
-        if (extra != null) {
-            for (String key : extra.keySet()) {
-                body.put(key, extra.get(key));
-            }
-        }
-
         JSONParser parser = new JSONParser();
-        try {
-            return new TransactionResponse((JSONObject) parser.parse(this.executeRequest("POST", endpoint, date, (String) params.get("nonce"), body, (String) params.getOrDefault("mode", "synchronous"))));
-        } catch (ParseException e) {
-            throw new ServerException("Issue to parse transaction response", "parsing-issue");
-        }
+        return new TransactionResponse((JSONObject) parser.parse(this.executeRequest("POST", endpoint, new Date(), (String) params.getOrDefault("nonce", RandomGenerator.nonce()), body, (String) params.getOrDefault("mode", "synchronous"))));
     }
 
     /**
-     * Method to make deposit in a receiver mobile account.
+     * Make deposit in customer account
      *
-     * @param params object with the below information
-     *               - amount: amount to collect
-     *               - service: payment service with the possible values MTN, ORANGE, AIRTEL
-     *               - receiver: account number to depose money
-     *               - date: date of the request
-     *               - nonce: unique string on each request
-     *               - country: 2 letters country code of the service (configured during your service registration in MeSomb)
-     *               - currency: currency of your service depending on your country
-     *               - conversion: true in case of foreign currently defined if you want to rely on MeSomb to convert the amount in the local currency
-     *               - location: Map containing the location of the customer with the following attributes: town, region and location all string.
-     *               - products: It is array of products. Each product are Map with the following attributes: name string, category string, quantity int and amount float
-     *               - customer: a Map containing information about the customer: phone string, email: string, first_name string, last_name string, address string, town string, region string and country string
-     *               - trxID: if you want to include your transaction ID in the request
-     *               - extra: Map to add some extra attribute depending on the API documentation
-     * @return TransactionResponse
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeyException
-     * @throws ServerException
-     * @throws ServiceNotFoundException
-     * @throws PermissionDeniedException
-     * @throws InvalidClientRequestException
+     * @param params a map containing the following keys:
+     *               - amount: the amount to collect (required)
+     *               - service: the payment service to use (required)
+     *               - receiver: the payer's identifier (required)
+     *               - nonce: a unique string for each request (optional)
+     *               - country: the country code (optional, defaults to "CM")
+     *               - currency: the currency code (optional, defaults to "XAF")
+     *               - conversion: whether to convert the amount (optional, defaults to false)
+     *               - trxID: the transaction ID (optional)
+     *               - location: Map (optional) containing the location of the customer with the following attributes: town, region and location all string.
+     *               - customer: Map (optional) containing information about the customer: phone string, email: string, first_name string, last_name string, address string, town string, region string and country string
+     *               - products: It is a List of products (optional). Each product are Map with the following attributes: name string, category string, quantity int and amount float
+     *               - extra: a map of extra attributes (optional)
+     *               - mode: the operation mode (optional, defaults to "synchronous")
+     * @return a TransactionResponse object containing the response from the server
+     * @throws IOException if an I/O error occurs
+     * @throws NoSuchAlgorithmException if the algorithm is not supported
+     * @throws InvalidKeyException if the key is invalid
+     * @throws ServerException if the server encounters an error
+     * @throws ServiceNotFoundException if the service is not found
+     * @throws PermissionDeniedException if permission is denied
+     * @throws InvalidClientRequestException if the request is invalid
+     * @throws ParseException if the response cannot be parsed
      */
-    public TransactionResponse makeDeposit(Map<String, Object> params) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
+    public TransactionResponse makeDeposit(Map<String, Object> params) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException, ParseException, java.text.ParseException {
         String endpoint = "payment/deposit/";
-
-        Date date = (Date) params.getOrDefault("date", new Date());
 
         Map<String, Object> body = new HashMap<>();
         body.put("amount", params.get("amount"));
@@ -255,6 +130,7 @@ public class PaymentOperation {
         body.put("receiver", params.get("receiver"));
         body.put("country", params.getOrDefault("country", "CM"));
         body.put("currency", params.getOrDefault("currency", "XAF"));
+        body.put("amount_currency", params.getOrDefault("currency", "XAF"));
         body.put("conversion", params.getOrDefault("conversion", false));
 
         if (params.getOrDefault("trxID", null) != null) {
@@ -273,154 +149,171 @@ public class PaymentOperation {
             body.put("products", params.get("products"));
         }
 
-        Map<String, Object> extra = (Map<String, Object>) params.getOrDefault("extra", null);
-        if (extra != null) {
-            for (String key : extra.keySet()) {
-                body.put(key, extra.get(key));
-            }
-        }
-
         JSONParser parser = new JSONParser();
-        try {
-            return new TransactionResponse((JSONObject) parser.parse(this.executeRequest("POST", endpoint, date, (String) params.get("nonce"), body)));
-        } catch (ParseException e) {
-            throw new ServerException("Issue to parse transaction response", "parsing-issue");
-        }
-    }
-
-
-    /**
-     * Update security parameters of your service on MeSomb
-     *
-     * @param field  which security field you want to update (check API documentation)
-     * @param action action SET or UNSET
-     * @param value  value of the field
-     * @param date   date of the request
-     * @return Application
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeyException
-     * @throws ServerException
-     * @throws ServiceNotFoundException
-     * @throws PermissionDeniedException
-     * @throws InvalidClientRequestException
-     */
-    public Application updateSecurity(String field, String action, Object value, Date date) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
-        String endpoint = "payment/security/";
-
-        Map<String, Object> body = new HashMap<>();
-        body.put("field", field);
-        body.put("action", action);
-        if (!Objects.equals(action, "UNSET")) {
-            body.put("value", value);
-        }
-
-        if (date == null) {
-            date = new Date();
-        }
-
-        JSONParser parser = new JSONParser();
-        try {
-            return new Application((JSONObject) parser.parse(this.executeRequest("POST", endpoint, date, "", body)));
-        } catch (ParseException e) {
-            throw new ServerException("Issue to parse transaction response", "parsing-issue");
-        }
-    }
-
-    public Application updateSecurity(String field, String action) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException {
-        return this.updateSecurity(field, action, null, null);
-    }
-
-    public Application updateSecurity(String field, String action, Object value) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException {
-        return this.updateSecurity(field, action, value, null);
+        return new TransactionResponse((JSONObject) parser.parse(this.executeRequest("POST", endpoint, new Date(), (String) params.get("nonce"), body)));
     }
 
     /**
      * Get the current status of your service on MeSomb
      *
-     * @return
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeyException
-     * @throws ServerException
-     * @throws ServiceNotFoundException
-     * @throws PermissionDeniedException
-     * @throws InvalidClientRequestException
+     * @return Application object containing the response from the server
+     *
+     * @throws IOException if an I/O error occurs
+     * @throws NoSuchAlgorithmException if the algorithm is not supported
+     * @throws InvalidKeyException if the key is invalid
+     * @throws ServerException if the server encounters an error
+     * @throws ServiceNotFoundException if the service is not found
+     * @throws PermissionDeniedException if permission is denied
+     * @throws InvalidClientRequestException if the request is invalid
      */
-    public Application getStatus() throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
+    public Application getStatus() throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException, ParseException {
         String endpoint = "payment/status/";
 
         JSONParser parser = new JSONParser();
-        try {
-            return new Application((JSONObject) parser.parse(this.executeRequest("GET", endpoint, new Date())));
-        } catch (ParseException e) {
-            throw new ServerException("Issue to parse transaction response", "parsing-issue");
-        }
+        return new Application((JSONObject) parser.parse(this.executeRequest("GET", endpoint, new Date())));
     }
 
     /**
      * Get transactions stored in MeSomb based on the list
      *
      * @param ids Ids of transactions to fetch
-     * @return List of the transactions fetched
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeyException
-     * @throws ServerException
-     * @throws ServiceNotFoundException
-     * @throws PermissionDeniedException
-     * @throws InvalidClientRequestException
+     * @param source Source of the transaction with possible values MESOMB, EXTERNAL
+     *
+     * @return Transaction[] of the transactions fetched
+     *
+     * @throws IOException if an I/O error occurs
+     * @throws NoSuchAlgorithmException if the algorithm is not supported
+     * @throws InvalidKeyException if the key is invalid
+     * @throws ServerException if the server encounters an error
+     * @throws ServiceNotFoundException if the service is not found
+     * @throws PermissionDeniedException if permission is denied
+     * @throws InvalidClientRequestException if the request is invalid
+     * @throws ParseException if the response cannot be parsed
      */
-    public Transaction[] getTransactions(String[] ids, String source) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
+    public Transaction[] getTransactions(String[] ids, String source) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException, ParseException, java.text.ParseException {
         String endpoint = "payment/transactions/?ids=" + String.join(",", ids) + "&source=" + source;
 
         JSONParser parser = new JSONParser();
-        try {
-            JSONArray response = (JSONArray) parser.parse(this.executeRequest("GET", endpoint, new Date()));
-            Transaction[] transactions = new Transaction[response.size()];
-            for (int i = 0; i < response.size(); i++) {
-                transactions[i] = new Transaction((JSONObject) response.get(i));
-            }
-            return transactions;
-        } catch (ParseException e) {
-            throw new ServerException("Issue to parse transaction response", "parsing-issue");
+        JSONArray response = (JSONArray) parser.parse(this.executeRequest("GET", endpoint, new Date()));
+        Transaction[] transactions = new Transaction[response.size()];
+        for (int i = 0; i < response.size(); i++) {
+            transactions[i] = new Transaction((JSONObject) response.get(i));
         }
+        return transactions;
     }
 
-    public Transaction[] getTransactions(String[] ids) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException {
+    /**
+     * Get transactions stored in MeSomb based on the list
+     *
+     * @param ids Ids of transactions to fetch
+     *
+     * @return Transaction[] of the transactions fetched
+     *
+     * @throws IOException if an I/O error occurs
+     * @throws NoSuchAlgorithmException if the algorithm is not supported
+     * @throws InvalidKeyException if the key is invalid
+     * @throws ServerException if the server encounters an error
+     * @throws ServiceNotFoundException if the service is not found
+     * @throws PermissionDeniedException if permission is denied
+     * @throws InvalidClientRequestException if the request is invalid
+     * @throws ParseException if the response cannot be parsed
+     */
+    public Transaction[] getTransactions(String[] ids) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException, ParseException, java.text.ParseException {
         return this.getTransactions(ids, "MESOMB");
     }
 
     /**
-     * Reprocess transaction at the operators level to confirm the status of a transaction
+     * Check transactions stored in MeSomb based on the list
      *
-     * @param ids list of transaction ids
-     * @return List of the transactions processed
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeyException
-     * @throws ServerException
-     * @throws ServiceNotFoundException
-     * @throws PermissionDeniedException
-     * @throws InvalidClientRequestException
+     * @param ids Ids of transactions to fetch
+     *
+     * @return Transaction[] of the transactions fetched
+     *
+     * @throws IOException if an I/O error occurs
+     * @throws NoSuchAlgorithmException if the algorithm is not supported
+     * @throws InvalidKeyException if the key is invalid
+     * @throws ServerException if the server encounters an error
+     * @throws ServiceNotFoundException if the service is not found
+     * @throws PermissionDeniedException if permission is denied
+     * @throws InvalidClientRequestException if the request is invalid
+     * @throws ParseException if the response cannot be parsed
      */
-    public Transaction[] checkTransactions(String[] ids, String source) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException {
+    public Transaction[] checkTransactions(String[] ids, String source) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException, ParseException, java.text.ParseException {
         String endpoint = "payment/transactions/check/?ids=" + String.join(",", ids) + "&source=" + source;
 
         JSONParser parser = new JSONParser();
-        try {
-            JSONArray response = (JSONArray) parser.parse(this.executeRequest("GET", endpoint, new Date()));
-            Transaction[] transactions = new Transaction[response.size()];
-            for (int i = 0; i < response.size(); i++) {
-                transactions[i] = new Transaction((JSONObject) response.get(i));
-            }
-            return transactions;
-        } catch (ParseException e) {
-            throw new ServerException("Issue to parse transaction response", "parsing-issue");
+        JSONArray response = (JSONArray) parser.parse(this.executeRequest("GET", endpoint, new Date()));
+        Transaction[] transactions = new Transaction[response.size()];
+        for (int i = 0; i < response.size(); i++) {
+            transactions[i] = new Transaction((JSONObject) response.get(i));
         }
+        return transactions;
     }
 
-    public Transaction[] checkTransactions(String[] ids) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException {
+    /**
+     * Check transactions stored in MeSomb based on the list
+     *
+     * @param ids Ids of transactions to fetch
+     *
+     * @return Transaction[] of the transactions fetched
+     *
+     * @throws IOException if an I/O error occurs
+     * @throws NoSuchAlgorithmException if the algorithm is not supported
+     * @throws InvalidKeyException if the key is invalid
+     * @throws ServerException if the server encounters an error
+     * @throws ServiceNotFoundException if the service is not found
+     * @throws PermissionDeniedException if permission is denied
+     * @throws InvalidClientRequestException if the request is invalid
+     * @throws ParseException if the response cannot be parsed
+     */
+    public Transaction[] checkTransactions(String[] ids) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException, ParseException, java.text.ParseException {
         return this.checkTransactions(ids, "MESOMB");
+    }
+
+    /**
+     * Refund a transaction
+     * @param id the id of the transaction to refund
+     * @param amount the amount to refund (optional)
+     * @param currency the currency of the amount to refund (optional)
+     * @param conversion whether to convert the amount (optional)
+     *
+     * @return a TransactionResponse object containing the response from the server
+     *
+     * @throws IOException if an I/O error occurs
+     * @throws NoSuchAlgorithmException if the algorithm is not supported
+     * @throws InvalidKeyException if the key is invalid
+     * @throws ServerException if the server encounters an error
+     * @throws ServiceNotFoundException if the service is not found
+     * @throws PermissionDeniedException if permission is denied
+     * @throws InvalidClientRequestException if the request is invalid
+     * @throws ParseException if the response cannot be parsed
+     */
+    public TransactionResponse refundTransaction(String id, Double amount, String currency, Boolean conversion) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException, ParseException, java.text.ParseException {
+        String endpoint = "payment/refund/";
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("id", id);
+        if (amount != null) {
+            body.put("amount", amount);
+        }
+        if (currency != null) {
+            body.put("currency", currency);
+            body.put("amount_currency", currency);
+        }
+        if (conversion != null) {
+            body.put("conversion", conversion);
+        }
+
+        JSONParser parser = new JSONParser();
+        return new TransactionResponse((JSONObject) parser.parse(this.executeRequest("POST", endpoint, new Date(), RandomGenerator.nonce(), body)));
+    }
+
+    public TransactionResponse refundTransaction(String id) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, ParseException, InvalidKeyException, java.text.ParseException {
+        return this.refundTransaction(id, null, null, null);
+    }
+
+    @Override
+    public String getService() {
+        return "payment";
     }
 }

@@ -3,7 +3,6 @@ package com.hachther.mesomb.models;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
-import java.util.Map;
 import java.util.Objects;
 
 public class Application {
@@ -12,10 +11,7 @@ public class Application {
     public final ApplicationBalance[] balances;
     public final String[] countries;
     public final String description;
-    public final boolean isLive;
     public final String name;
-    public final Map<String, Object> security;
-    public final String status;
     public final String url;
 
     public Application(JSONObject data) {
@@ -32,10 +28,7 @@ public class Application {
             this.countries[i] = (String) countries.get(i);
         }
         this.description = (String) data.get("description");
-        this.isLive = (boolean) data.get("is_live");
         this.name = (String) data.get("name");
-        this.security = (JSONObject) data.get("security");
-        this.status = (String) data.get("status");
         this.url = (String) data.get("url");
     }
 
@@ -60,9 +53,5 @@ public class Application {
 
     public float getBalance(String country) {
         return this.getBalance(country, null);
-    }
-
-    public Object getSecurityField(String field) {
-        return this.security.get(field);
     }
 }
