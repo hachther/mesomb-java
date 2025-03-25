@@ -15,7 +15,7 @@ public class MeSomb {
 
     /** The version of the MeSomb API to use for requests. */
     public static String apiVersion = "v1.1";
-    public static String version = "1.1.3";
+    public static String version = "2.0.1";
 
     /** The language to use for requests. */
     public static String language = "en";

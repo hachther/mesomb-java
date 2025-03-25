@@ -4,11 +4,13 @@ import com.hachther.mesomb.exceptions.InvalidClientRequestException;
 import com.hachther.mesomb.exceptions.PermissionDeniedException;
 import com.hachther.mesomb.exceptions.ServerException;
 import com.hachther.mesomb.exceptions.ServiceNotFoundException;
+import com.hachther.mesomb.models.PaginatedWalletTransactions;
 import com.hachther.mesomb.models.PaginatedWallets;
 import com.hachther.mesomb.models.Wallet;
 import com.hachther.mesomb.models.WalletTransaction;
 import com.hachther.mesomb.util.RandomGenerator;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -325,14 +327,14 @@ public class WalletOperation extends AOperation {
      * @throws InvalidClientRequestException if the request is invalid
      * @throws InvalidKeyException if the key is invalid
      */
-    public PaginatedWallets getTransactions(int page, Long wallet) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException, ParseException {
+    public PaginatedWalletTransactions listTransactions(int page, Long wallet) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException, ParseException, java.text.ParseException {
         String endpoint = "wallet/transactions/?page=" + page;
         if (wallet != null) {
             endpoint += "&wallet=" + wallet;
         }
 
         JSONParser parser = new JSONParser();
-        return new PaginatedWallets((JSONObject) parser.parse(this.executeRequest("GET", endpoint, new Date(), RandomGenerator.nonce(), null)));
+        return new PaginatedWalletTransactions((JSONObject) parser.parse(this.executeRequest("GET", endpoint, new Date(), RandomGenerator.nonce(), null)));
     }
 
     /**
@@ -350,8 +352,8 @@ public class WalletOperation extends AOperation {
      * @throws InvalidClientRequestException if the request is invalid
      * @throws InvalidKeyException if the key is invalid
      */
-    public PaginatedWallets getTransactions(int page) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException, ParseException {
-        return getTransactions(page, null);
+    public PaginatedWalletTransactions listTransactions(int page) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException, ParseException, java.text.ParseException {
+        return listTransactions(page, null);
     }
 
     /**
@@ -374,6 +376,27 @@ public class WalletOperation extends AOperation {
 
         JSONParser parser = new JSONParser();
         return new WalletTransaction((JSONObject) parser.parse(this.executeRequest("GET", endpoint, new Date(), RandomGenerator.nonce(), null)));
+    }
+
+    public WalletTransaction[] getTransactions(String[] ids, String source) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException, ParseException, java.text.ParseException {
+        String[] query = new String[ids.length];
+        for (int i = 0; i < ids.length; i++) {
+            query[i] = "ids=" + ids[i];
+        }
+
+        String endpoint = "wallet/transactions/search/?" + String.join("&", query) + "&source=" + source;
+
+        JSONParser parser = new JSONParser();
+        JSONArray response = (JSONArray) parser.parse(this.executeRequest("GET", endpoint, new Date()));
+        WalletTransaction[] transactions = new WalletTransaction[response.size()];
+        for (int i = 0; i < response.size(); i++) {
+            transactions[i] = new WalletTransaction((JSONObject) response.get(i));
+        }
+        return transactions;
+    }
+
+    public WalletTransaction[] getTransactions(String[] ids) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException, ParseException, java.text.ParseException {
+        return getTransactions(ids, "MESOMB");
     }
 
     @Override

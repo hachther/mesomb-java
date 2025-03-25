@@ -5,6 +5,7 @@ import com.hachther.mesomb.exceptions.InvalidClientRequestException;
 import com.hachther.mesomb.exceptions.PermissionDeniedException;
 import com.hachther.mesomb.exceptions.ServerException;
 import com.hachther.mesomb.exceptions.ServiceNotFoundException;
+import com.hachther.mesomb.models.PaginatedWalletTransactions;
 import com.hachther.mesomb.models.PaginatedWallets;
 import com.hachther.mesomb.models.Wallet;
 import com.hachther.mesomb.models.WalletTransaction;
@@ -152,5 +153,23 @@ public class WalletOperationTest {
         Assertions.assertEquals(transaction.country, "CM");
         Assertions.assertNotNull(transaction.finTrxId);
         Assertions.assertNotNull(transaction.date);
+    }
+
+    @Test
+    public void testListTransactionsWithSuccess() throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, ParseException, InvalidKeyException, java.text.ParseException {
+        WalletOperation client = new WalletOperation(this.providerKey, this.accessKey, this.secretKey);
+        PaginatedWalletTransactions transaction = client.listTransactions(1);
+
+        Assertions.assertNull(transaction.previous);
+        Assertions.assertTrue(transaction.count > 0);
+        Assertions.assertTrue(transaction.results.length > 0);
+    }
+
+    @Test
+    public void testGetTransactionsWithSuccess() throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, ParseException, InvalidKeyException, java.text.ParseException {
+        WalletOperation client = new WalletOperation(this.providerKey, this.accessKey, this.secretKey);
+        WalletTransaction[] transactions = client.getTransactions(new String[]{"620757", "620756"});
+
+        Assertions.assertTrue(transactions.length > 0);
     }
 }

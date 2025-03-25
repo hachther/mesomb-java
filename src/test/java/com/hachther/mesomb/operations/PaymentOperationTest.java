@@ -326,7 +326,7 @@ public class PaymentOperationTest {
     public void testCheckTransactionsSuccess() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
         try {
-            Transaction[] transactions = payment.checkTransactions(new String[]{"00440457-61a6-485a-8437-eb4fa044d204"});
+            Transaction[] transactions = payment.checkTransactions(new String[]{"00440457-61a6-485a-8437-eb4fa044d204", "00440457-61a6-485a-8437-eb4fa044d204"});
             Assertions.assertEquals(1, transactions.length);
             Assertions.assertEquals("00440457-61a6-485a-8437-eb4fa044d204", transactions[0].pk);
         } catch (ServerException | ServiceNotFoundException | PermissionDeniedException |

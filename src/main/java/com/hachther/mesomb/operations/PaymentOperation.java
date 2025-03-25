@@ -17,6 +17,7 @@ import org.json.simple.parser.ParseException;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -191,7 +192,11 @@ public class PaymentOperation extends AOperation {
      * @throws ParseException if the response cannot be parsed
      */
     public Transaction[] getTransactions(String[] ids, String source) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException, ParseException, java.text.ParseException {
-        String endpoint = "payment/transactions/?ids=" + String.join(",", ids) + "&source=" + source;
+        String[] query = new String[ids.length];
+        for (int i = 0; i < ids.length; i++) {
+            query[i] = "ids=" + ids[i];
+        }
+        String endpoint = "payment/transactions/check/?" + String.join("&", query) + "&source=" + source;
 
         JSONParser parser = new JSONParser();
         JSONArray response = (JSONArray) parser.parse(this.executeRequest("GET", endpoint, new Date()));
@@ -239,7 +244,11 @@ public class PaymentOperation extends AOperation {
      * @throws ParseException if the response cannot be parsed
      */
     public Transaction[] checkTransactions(String[] ids, String source) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException, ParseException, java.text.ParseException {
-        String endpoint = "payment/transactions/check/?ids=" + String.join(",", ids) + "&source=" + source;
+        String[] query = new String[ids.length];
+        for (int i = 0; i < ids.length; i++) {
+            query[i] = "ids=" + ids[i];
+        }
+        String endpoint = "payment/transactions/check/?" + String.join("&", query) + "&source=" + source;
 
         JSONParser parser = new JSONParser();
         JSONArray response = (JSONArray) parser.parse(this.executeRequest("GET", endpoint, new Date()));

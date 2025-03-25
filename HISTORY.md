@@ -1,3 +1,10 @@
+# 2.0.1 (2025-03-25)
+
+## Added
+
+- Rename getTransactions to listTransactions
+- Add getTransactions method to get a transaction by its id
+
 # 2.0.0 (2025-03-05)
 
 ## Added

@@ -23,7 +23,7 @@ public class Wallet {
     public Wallet(JSONObject data) {
         _data = data;
 
-        this.id = (Long) data.get("identifier");
+        this.id = (Long) data.get("id");
         this.number = (String) data.get("number");
         this.country = (String) data.get("country");
         this.status = (String) data.get("status");
