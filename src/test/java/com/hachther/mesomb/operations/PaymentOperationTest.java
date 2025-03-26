@@ -245,6 +245,32 @@ public class PaymentOperationTest {
     }
 
     @Test
+    public void testPurchaseAirtimeWithSuccess() {
+        PaymentOperation payment = new PaymentOperation(this.applicationKey, this.accessKey, this.secretKey);
+        try {
+            TransactionResponse response = payment.purchaseAirtime(new HashMap<String, Object>() {{
+                put("amount", 100);
+                put("service", "MTN");
+                put("receiver", "670000000");
+                put("merchant", "MTN");
+            }});
+            Assertions.assertTrue(response.isOperationSuccess());
+            Assertions.assertTrue(response.isTransactionSuccess());
+            Assertions.assertEquals(response.status, "SUCCESS");
+            Assertions.assertEquals(response.transaction.amount, 100);
+            Assertions.assertEquals(response.transaction.fees, 1.01);
+            Assertions.assertEquals(response.transaction.b_party, "237670000000");
+            Assertions.assertEquals(response.transaction.country, "CM");
+            Assertions.assertEquals(response.transaction.currency, "XAF");
+            Assertions.assertEquals(response.transaction.reference, "1");
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | ServerException |
+                 ServiceNotFoundException | PermissionDeniedException |
+                 InvalidClientRequestException | ParseException | java.text.ParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
     public void testGetStatusNotServiceFound() {
         PaymentOperation payment = new PaymentOperation(this.applicationKey + "f", this.accessKey, this.secretKey);
         Exception exception = assertThrows(ServiceNotFoundException.class, payment::getStatus);

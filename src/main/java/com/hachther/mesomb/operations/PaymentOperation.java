@@ -102,6 +102,65 @@ public class PaymentOperation extends AOperation {
      *               - amount: the amount to collect (required)
      *               - service: the payment service to use (required)
      *               - receiver: the payer's identifier (required)
+     *               - merchant: the merchant's identifier (required)
+     *               - nonce: a unique string for each request (optional)
+     *               - country: the country code (optional, defaults to "CM")
+     *               - currency: the currency code (optional, defaults to "XAF")
+     *               - trxID: the transaction ID (optional)
+     *               - location: Map (optional) containing the location of the customer with the following attributes: town, region and location all string.
+     *               - customer: Map (optional) containing information about the customer: phone string, email: string, first_name string, last_name string, address string, town string, region string and country string
+     *               - products: It is a List of products (optional). Each product are Map with the following attributes: name string, category string, quantity int and amount float
+     *               - extra: a map of extra attributes (optional)
+     *               - mode: the operation mode (optional, defaults to "synchronous")
+     * @return a TransactionResponse object containing the response from the server
+     * @throws IOException if an I/O error occurs
+     * @throws NoSuchAlgorithmException if the algorithm is not supported
+     * @throws InvalidKeyException if the key is invalid
+     * @throws ServerException if the server encounters an error
+     * @throws ServiceNotFoundException if the service is not found
+     * @throws PermissionDeniedException if permission is denied
+     * @throws InvalidClientRequestException if the request is invalid
+     * @throws ParseException if the response cannot be parsed
+     */
+    public TransactionResponse purchaseAirtime(Map<String, Object> params) throws IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, ServiceNotFoundException, PermissionDeniedException, InvalidClientRequestException, ParseException, java.text.ParseException {
+        String endpoint = "payment/airtime/";
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("amount", params.get("amount"));
+        body.put("service", params.get("service"));
+        body.put("receiver", params.get("receiver"));
+        body.put("merchant", params.get("merchant"));
+        body.put("country", params.getOrDefault("country", "CM"));
+        body.put("currency", params.getOrDefault("currency", "XAF"));
+        body.put("amount_currency", params.getOrDefault("currency", "XAF"));
+
+        if (params.getOrDefault("trxID", null) != null) {
+            body.put("trxID", params.get("trxID"));
+        }
+
+        if (params.getOrDefault("location", null) != null) {
+            body.put("location", params.get("location"));
+        }
+
+        if (params.getOrDefault("customer", null) != null) {
+            body.put("customer", params.get("customer"));
+        }
+
+        if (params.getOrDefault("products", null) != null) {
+            body.put("products", params.get("products"));
+        }
+
+        JSONParser parser = new JSONParser();
+        return new TransactionResponse((JSONObject) parser.parse(this.executeRequest("POST", endpoint, new Date(), (String) params.getOrDefault("nonce", RandomGenerator.nonce()), body)));
+    }
+
+    /**
+     * Make deposit in customer account
+     *
+     * @param params a map containing the following keys:
+     *               - amount: the amount to collect (required)
+     *               - service: the payment service to use (required)
+     *               - receiver: the payer's identifier (required)
      *               - nonce: a unique string for each request (optional)
      *               - country: the country code (optional, defaults to "CM")
      *               - currency: the currency code (optional, defaults to "XAF")
@@ -151,7 +210,7 @@ public class PaymentOperation extends AOperation {
         }
 
         JSONParser parser = new JSONParser();
-        return new TransactionResponse((JSONObject) parser.parse(this.executeRequest("POST", endpoint, new Date(), (String) params.get("nonce"), body)));
+        return new TransactionResponse((JSONObject) parser.parse(this.executeRequest("POST", endpoint, new Date(), (String) params.getOrDefault("nonce", RandomGenerator.nonce()), body)));
     }
 
     /**
