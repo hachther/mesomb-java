@@ -288,6 +288,45 @@ public class WalletOperation extends AOperation {
      * @param from The wallet identifier
      * @param to The wallet identifier
      * @param amount The amount to add
+     * @param message The message to add to the transaction (optional)
+     * @param externalId The external identifier of the transaction (optional)
+     *
+     * @return WalletTransaction
+     *
+     * @throws ServerException if an error occurred on the server
+     * @throws ServiceNotFoundException if the service is not found
+     * @throws PermissionDeniedException if the permission is denied
+     * @throws IOException if an error occurred while reading the response
+     * @throws NoSuchAlgorithmException if the algorithm is not found
+     * @throws InvalidClientRequestException if the request is invalid
+     * @throws InvalidKeyException if the key is invalid
+     */
+    public WalletTransaction transferMoney(Long from, Long to, float amount, boolean force, String message, String externalId) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException, ParseException, java.text.ParseException {
+        String endpoint = "wallet/wallets/" + from + "/transfer/";
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("amount", amount);
+        body.put("to", to);
+        body.put("force", force);
+
+        if (message != null) {
+            body.put("message", message);
+        }
+
+        if (externalId != null) {
+            body.put("trxID", externalId);
+        }
+
+        JSONParser parser = new JSONParser();
+        return new WalletTransaction((JSONObject) parser.parse(this.executeRequest("POST", endpoint, new Date(), RandomGenerator.nonce(), body)));
+    }
+
+    /**
+     * Remove money to a wallet
+     *
+     * @param from The wallet identifier
+     * @param to The wallet identifier
+     * @param amount The amount to add
      *
      * @return WalletTransaction
      *
@@ -300,15 +339,7 @@ public class WalletOperation extends AOperation {
      * @throws InvalidKeyException if the key is invalid
      */
     public WalletTransaction transferMoney(Long from, Long to, float amount, boolean force) throws ServerException, ServiceNotFoundException, PermissionDeniedException, IOException, NoSuchAlgorithmException, InvalidClientRequestException, InvalidKeyException, ParseException, java.text.ParseException {
-        String endpoint = "wallet/wallets/" + from + "/transfer/";
-
-        Map<String, Object> body = new HashMap<>();
-        body.put("amount", amount);
-        body.put("to", to);
-        body.put("force", force);
-
-        JSONParser parser = new JSONParser();
-        return new WalletTransaction((JSONObject) parser.parse(this.executeRequest("POST", endpoint, new Date(), RandomGenerator.nonce(), body)));
+        return transferMoney(from, to, amount, force, null, null);
     }
 
     /**
