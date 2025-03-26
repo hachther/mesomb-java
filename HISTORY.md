@@ -1,3 +1,9 @@
+# 2.0.2 (2025-03-26)
+
+## Added
+
+- Add purchaseAirtime method to handle airtime purchases Hachther Co. A minute ago
+
 # 2.0.1 (2025-03-25)
 
 ## Added
